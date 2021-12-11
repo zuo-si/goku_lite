@@ -1,6 +1,8 @@
 package interpreter
 
-import "net/http"
+import (
+	"net/http"
+)
 
 //MergeBodys mergeBodys
 func MergeBodys(bodys []interface{}) interface{} {

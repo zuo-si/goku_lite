@@ -119,46 +119,62 @@ type APIContent struct {
 
 //APIStepConfig 链路配置
 type APIStepConfig struct {
-	Proto   string   `json:"proto"`
-	Balance string   `json:"balance"`
-	Method  string   `json:"method"` // follow | get | post | put ...
-	Path    string   `json:"path"`
-	Body    string   `json:"body"`
-	Headers []string `json:"headers,omitempty"`
-	Decode  string   `json:"decode"` // origin | json
-	Encode  string   `json:"encode"` // origin | form | json
+	Name        string   `json:"name"`         //step1 or step2
+	ParentNames []string `json:"parent_names"` //["step2", "step3"]
+	Proto       string   `json:"proto"`
+	Balance     string   `json:"balance"`
+	Method      string   `json:"method"` // follow | get | post | put ...
+	Path        string   `json:"path"`
+	Body        string   `json:"body"`
+	Headers     []string `json:"headers,omitempty"`
+	Decode      string   `json:"decode"` // origin | json
+	Encode      string   `json:"encode"` // origin | form | json
 
 	Actions   []*ActionConfig `json:"actions"`
 	BlackList []string        `json:"blackList"`
 	WhiteList []string        `json:"whiteList"`
 
-	Target  string `json:"target"`
-	Group   string `json:"group"`
-	Retry   int    `json:"retry"`
-	TimeOut int    `json:"timeout"`
+	Target string `json:"target"`
+	Group  string `json:"group"`
+
+	FirstKeyUpper bool `json:"firstkeyupper"`
+	JSON2Form     bool `json:"json2form"`
+
+	Retry   int `json:"retry"`
+	TimeOut int `json:"timeout"`
 }
 
 //APIStepUIConfig 链路UI配置
 type APIStepUIConfig struct {
-	Proto   string   `json:"proto"`
-	Balance string   `json:"balance"`
-	Method  string   `json:"method"` // follow | get | post | put ...
-	Path    string   `json:"path"`
-	Body    string   `json:"body"`
-	Headers []string `json:"headers,omitempty"`
-	Decode  string   `json:"decode"` // origin | json
-	Encode  string   `json:"encode"` // origin | form | json
+	Name           string   `json:"name"`            //step1 or step2
+	ParentNamesStr string   `json:"parent_namesstr"` //"step2,step3"
+	ParentNames    []string `json:"parent_names"`    //["step2", "step3"]
+	Proto          string   `json:"proto"`
+	Balance        string   `json:"balance"`
+	Method         string   `json:"method"` // follow | get | post | put ...
+	Path           string   `json:"path"`
+	Body           string   `json:"body"`
+	Headers        []string `json:"headers,omitempty"`
+	Decode         string   `json:"decode"` // origin | json
+	Encode         string   `json:"encode"` // origin | form | json
 
-	BlackList []string `json:"blackList"`
-	WhiteList []string `json:"whiteList"`
+	BlackList    []string `json:"blackList"`
+	WhiteListStr string   `json:"whiteListStr"`
+	WhiteList    []string `json:"whiteList"`
 
-	Move    []MoveConfig   `json:"move"`
-	Delete  []DeleteConfig `json:"delete"`
-	Rename  []RenameConfig `json:"rename"`
-	Target  string         `json:"target"`
-	Group   string         `json:"group"`
-	Retry   int            `json:"retry"`
-	TimeOut int            `json:"timeout"`
+	Move   []MoveConfig   `json:"move"`
+	Delete []DeleteConfig `json:"delete"`
+	Rename []RenameConfig `json:"rename"`
+	//add by lxw
+	JSON2Form     bool                `json:"json2form"`
+	FirstKeyUpper bool                `json:"firstkeyupper"`
+	ArraySort     []ArraySortConfig   `json:"arraysort"`
+	ArrayFilter   []ArrayFilterConfig `json:"arrayfilter"`
+
+	Target  string `json:"target"`
+	Group   string `json:"group"`
+	Retry   int    `json:"retry"`
+	TimeOut int    `json:"timeout"`
 }
 
 //MoveConfig move配置
@@ -178,11 +194,32 @@ type RenameConfig struct {
 	Target string `json:"target"`
 }
 
+//ArraySortConfig 数组排序
+type ArraySortConfig struct {
+	Origin string `json:"origin"`
+	Field  string `json:"field"`
+}
+
+//ArrayFilterConfig 数组过滤
+type ArrayFilterConfig struct {
+	Origin   string `json:"origin"`
+	Field    string `json:"field"`
+	Operator string `json:"operator"`
+	Operand  string `json:"operand"`
+}
+
 //ActionConfig action配置
 type ActionConfig struct {
 	ActionType string `json:"type"`
 	Original   string `json:"original"`
 	Target     string `json:"target"`
+
+	//数组中的对象key
+	Field string `json:"field"`
+	//数组中的对象比较运算符
+	Operator string `json:"operator"`
+	//数组中的对象比较操作数
+	Operand string `json:"operand"`
 }
 
 //StrategyConfig 策略配置

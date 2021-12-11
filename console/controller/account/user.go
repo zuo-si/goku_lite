@@ -84,8 +84,8 @@ func EditPassword(httpResponse http.ResponseWriter, httpRequest *http.Request) {
 		return
 	}
 
-	userCookie := &http.Cookie{Name: "userToken", Value: utils.Md5(result + utils.Md5(newPassword)), Path: "/", MaxAge: 86400}
-	nameCookie := &http.Cookie{Name: "userID", Value: strconv.Itoa(userID), Path: "/", MaxAge: 86400}
+	userCookie := &http.Cookie{Name: "userToken", Value: utils.Md5(result + utils.Md5(newPassword)), Path: "/", MaxAge: 864000}
+	nameCookie := &http.Cookie{Name: "userID", Value: strconv.Itoa(userID), Path: "/", MaxAge: 864000}
 	http.SetCookie(httpResponse, userCookie)
 	http.SetCookie(httpResponse, nameCookie)
 

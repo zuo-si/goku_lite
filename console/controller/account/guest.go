@@ -36,6 +36,7 @@ func Login(httpResponse http.ResponseWriter, httpRequest *http.Request) {
 	loginPassword := httpRequest.PostFormValue("loginPassword")
 
 	loginPassword = utils.Md5(loginPassword)
+
 	flag, userID := account.Login(loginCall, loginPassword)
 	if !flag {
 
@@ -47,8 +48,8 @@ func Login(httpResponse http.ResponseWriter, httpRequest *http.Request) {
 		return
 	}
 
-	userCookie := &http.Cookie{Name: "userToken", Value: utils.Md5(loginCall + loginPassword), Path: "/", MaxAge: 86400}
-	nameCookie := &http.Cookie{Name: "userID", Value: strconv.Itoa(userID), Path: "/", MaxAge: 86400}
+	userCookie := &http.Cookie{Name: "userToken", Value: utils.Md5(loginCall + loginPassword), Path: "/", MaxAge: 864000}
+	nameCookie := &http.Cookie{Name: "userID", Value: strconv.Itoa(userID), Path: "/", MaxAge: 864000}
 	http.SetCookie(httpResponse, userCookie)
 	http.SetCookie(httpResponse, nameCookie)
 

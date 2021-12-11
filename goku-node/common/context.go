@@ -3,6 +3,7 @@ package common
 import (
 	"net/http"
 	"strconv"
+	"sync"
 
 	log "github.com/eolinker/goku-api-gateway/goku-log"
 
@@ -29,8 +30,14 @@ type Context struct {
 	finalTargetServer    string
 	retryTargetServers   string
 
-	RestfulParam map[string]string
-	LogFields    log.Fields
+	RestfulParam   map[string]string
+	LogFields      log.Fields
+	MultiStepLocks map[string]*ContextStepLock
+}
+
+//同一个http请求Context，不同的step，每个step有一把互斥锁处理并发
+type ContextStepLock struct {
+	sync.Mutex
 }
 
 //FinalTargetServer 获取最终转发服务器地址

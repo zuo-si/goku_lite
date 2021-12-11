@@ -4,6 +4,8 @@ import "net/http"
 
 //BackendResponse 后端响应
 type BackendResponse struct {
+	StepName           string
+	StepIndex          int
 	Method             string
 	Protocol           string
 	TargetURL          string

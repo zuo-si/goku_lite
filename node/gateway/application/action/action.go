@@ -2,6 +2,7 @@ package action
 
 import (
 	"strings"
+	"unsafe"
 
 	"github.com/eolinker/goku-api-gateway/config"
 	"github.com/eolinker/goku-api-gateway/node/gateway/response"
@@ -18,6 +19,10 @@ const (
 	Black = "black"
 	//White white
 	White = "white"
+	//Sort arraysort
+	ArraySort = "arraysort"
+	//Filter arrayfilt
+	ArrayFilt = "arrayfilter"
 )
 
 //Filter 过滤器
@@ -52,6 +57,22 @@ func GenByconfig(ac *config.ActionConfig) Filter {
 			target: ac.Target,
 			source: ac.Original,
 		}
+	case ArrayFilt:
+		return &ArrayFilter{
+			source:      ac.Original,
+			field:       ac.Field,
+			operator:    ac.Operator,
+			targetValue: ac.Operand,
+		}
+	case ArraySort:
+		return &ArraySortFilter{
+			source: ac.Original,
+			field:  ac.Field,
+		}
 	}
 	return nil
+}
+
+func bytesString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

@@ -2,8 +2,12 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/eolinker/goku-api-gateway/config"
 	log "github.com/eolinker/goku-api-gateway/goku-log"
@@ -24,12 +28,11 @@ type LayerApplication struct {
 
 //Execute execute
 func (app *LayerApplication) Execute(ctx *common.Context) {
-
 	orgBody, _ := ctx.ProxyRequest.RawBody()
 
 	bodyObj, _ := ctx.ProxyRequest.BodyInterface()
 
-	variables := interpreter.NewVariables(orgBody, bodyObj, ctx.ProxyRequest.Headers(), ctx.ProxyRequest.Cookies(), ctx.RestfulParam, ctx.ProxyRequest.Querys(), len(app.backsides))
+	variables := interpreter.NewVariablesExt(orgBody, bodyObj, ctx.ProxyRequest.Headers(), ctx.ProxyRequest.Cookies(), ctx.RestfulParam, ctx.ProxyRequest.Querys(), len(app.backsides))
 
 	deadline := context.Background()
 	cancelFunc := context.CancelFunc(nil)
@@ -42,7 +45,7 @@ func (app *LayerApplication) Execute(ctx *common.Context) {
 
 	resC := make(chan int, 1)
 	errC := make(chan error, 1)
-	go app.do(deadline, variables, ctx, resC, errC)
+	go app.doParallelly(deadline, variables, ctx, resC, errC)
 
 	defer func() {
 		close(resC)
@@ -70,7 +73,18 @@ func (app *LayerApplication) Execute(ctx *common.Context) {
 
 	mergeResponse, headers := variables.MergeResponse()
 
-	body, e := app.output.Encode(mergeResponse, nil)
+	//特殊处理，当最后一步JSON2Form=true，采用stringencoding编码
+	var bs []byte
+	if len(app.backsides) > 0 && app.backsides[len(app.backsides)-1].JSON2Form {
+		app.output = response.GetEncoder(response.String)
+		bs1, err := json2Form(mergeResponse)
+		if err != nil {
+			return
+		}
+		bs = bs1
+	}
+
+	body, e := app.output.Encode(mergeResponse, bs)
 	if e != nil {
 		log.Warn("encode response error:", e)
 		return
@@ -85,7 +99,29 @@ func (app *LayerApplication) Execute(ctx *common.Context) {
 	ctx.SetProxyResponseHandler(common.NewResponseReader(headers, 200, "200", body))
 
 }
-func (app *LayerApplication) do(ctxDeadline context.Context, variables *interpreter.Variables, ctx *common.Context, resC chan<- int, errC chan<- error) {
+
+//json2Form ...
+func json2Form(mergedResponse interface{}) ([]byte, error) {
+	if _, ok := mergedResponse.(map[string]interface{}); !ok {
+		bs, err := json.Marshal(mergedResponse)
+		if err != nil {
+			return nil, err
+		}
+		return bs, nil
+	}
+	var formDatas []string
+	for key, val := range mergedResponse.(map[string]interface{}) {
+		bs, err := json.Marshal(val)
+		if err != nil {
+			return nil, err
+		}
+		item := fmt.Sprintf("%s=%s", key, url.QueryEscape(*(*string)(unsafe.Pointer(&bs))))
+		formDatas = append(formDatas, item)
+	}
+	return response.StringBytes(strings.Join(formDatas, "&")), nil
+}
+
+/* func (app *LayerApplication) do(ctxDeadline context.Context, variables *interpreter.Variables, ctx *common.Context, resC chan<- int, errC chan<- error) {
 
 	l := len(app.backsides)
 	for i, b := range app.backsides {
@@ -122,6 +158,49 @@ func (app *LayerApplication) do(ctxDeadline context.Context, variables *interpre
 	}
 	resC <- 1
 
+} */
+
+func (app *LayerApplication) doParallelly(ctxDeadline context.Context, variables *interpreter.Variables, ctx *common.Context, resC chan<- int, errC chan<- error) {
+	l := len(app.backsides)
+	if l > 0 {
+		if ctx.MultiStepLocks == nil {
+			ctx.MultiStepLocks = make(map[string]*common.ContextStepLock)
+		}
+		for _, bs := range app.backsides {
+			ctx.MultiStepLocks[bs.Name] = new(common.ContextStepLock)
+		}
+
+		_, err := app.backsides[l-1].SendParallelly(ctxDeadline, ctx, variables)
+
+		if err != nil {
+			errC <- err
+			log.Warn("error by send parallelly.", "\t:", err)
+			return
+		}
+	}
+
+	resC <- 1
+
+}
+
+func (app *LayerApplication) getParentLayers(pNames []string) []*backend.Layer {
+	var result []*backend.Layer
+	for _, pname := range pNames {
+		for _, item := range app.backsides {
+			if item.Name == pname {
+				result = append(result, item)
+			}
+		}
+	}
+	return result
+}
+
+//index start from 1, following variables's body array
+func (app *LayerApplication) fillLayerRelationship() {
+	for idx, bs := range app.backsides {
+		bs.Index = idx + 1
+		bs.ParentLayers = app.getParentLayers(bs.ParentNames)
+	}
 }
 
 //NewLayerApplication create new layer application
@@ -136,6 +215,9 @@ func NewLayerApplication(apiContent *config.APIContent) *LayerApplication {
 	for _, step := range apiContent.Steps {
 		app.backsides = append(app.backsides, backend.NewLayer(step))
 	}
+
+	//fill all layer releationship
+	app.fillLayerRelationship()
 
 	if apiContent.StaticResponse != "" {
 		staticResponseStrategy := config.Parse(apiContent.StaticResponseStrategy)

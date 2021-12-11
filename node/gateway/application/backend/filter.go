@@ -18,7 +18,6 @@ func genFilter(blackList, whiteList []string, acs []*config.ActionConfig) action
 	}
 
 	for _, ac := range acs {
-
 		f := action.GenByconfig(ac)
 		if f != nil {
 			filters = append(filters, f)
